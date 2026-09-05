@@ -1,0 +1,11 @@
+build/
+sdkconfig
+sdkconfig.old
+managed_components/
+components/sfp/test_host/build/
+components/sfp/test_host/unity/
+__pycache__/
+.pytest_cache/
+*.gcov
+.env
+build_test/
