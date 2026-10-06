@@ -1,0 +1,2 @@
+# Test build: adds the shell's inject commands (fault injection).
+CONFIG_SFP_TEST_HOOKS=y

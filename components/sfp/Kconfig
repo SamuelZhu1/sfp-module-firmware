@@ -1,0 +1,43 @@
+menu "SFP+ module firmware"
+
+config SFP_TEST_HOOKS
+    bool "Fault injection commands (test build only)"
+    default n
+    help
+        Adds "inject nack <n>" and "inject sda_low <ms>" to the shell.
+
+config SFP_PIN_SDA
+    int "I2C SDA GPIO"
+    default 6
+config SFP_PIN_SCL
+    int "I2C SCL GPIO"
+    default 7
+config SFP_PIN_MOD_ABS
+    int "MOD_ABS input GPIO (low = module present)"
+    default 3
+    help
+        Not GPIO2: it is a boot strapping pin and a module left in the cage
+        holds MOD_ABS low at reset.
+config SFP_PIN_RX_LOS
+    int "RX_LOS input GPIO"
+    default 4
+config SFP_PIN_TX_FAULT
+    int "TX_FAULT input GPIO"
+    default 5
+config SFP_PIN_TX_DISABLE
+    int "TX_DISABLE output GPIO"
+    default 20
+config SFP_PIN_POWER
+    int "Module power enable GPIO (load switch)"
+    default 10
+config SFP_PIN_DEBUG
+    int "Debug pulse GPIO (toggled in the RX_LOS ISR)"
+    default 21
+config SFP_PIN_SDA_HOLD
+    int "Spare GPIO wired to SDA through 220 ohm, for fault injection"
+    default 2
+    help
+        Open drain and released (high) at boot, so the strapping pin still
+        reads high through the SDA pull-up.
+
+endmenu
