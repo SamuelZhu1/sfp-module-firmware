@@ -1,0 +1,67 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit tests (Unity, native GCC, -Werror)
+        run: make -C components/sfp/test_host test
+      - run: pip install gcovr
+      - name: Line coverage (gcovr)
+        run: make -C components/sfp/test_host coverage
+
+  hil-sim:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest
+      - name: Build simulator
+        run: make -C components/sfp/test_host sim
+      - name: HIL suite against the simulator (includes 200-cycle hot-plug soak)
+        run: python -m pytest tests_hil -v
+
+  static-analysis:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y cppcheck
+      - name: cppcheck
+        run: >
+          cppcheck --enable=warning,performance,portability --error-exitcode=1
+          --inline-suppr --std=c11 -DSFP_TEST_HOOKS
+          -I components/sfp/include -I components/sfp/src -I components/shell/include
+          components/sfp/src components/shell
+
+  firmware:
+    runs-on: ubuntu-24.04
+    container: espressif/idf:v5.2.2
+    strategy:
+      matrix:
+        variant: [release, test]
+    steps:
+      - uses: actions/checkout@v4
+      - name: idf.py build (${{ matrix.variant }})
+        shell: bash
+        run: |
+          . $IDF_PATH/export.sh
+          if [ "${{ matrix.variant }}" = test ]; then
+            idf.py -B build_test -DSDKCONFIG=build_test/sdkconfig \
+              -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.test" build
+          else
+            idf.py set-target esp32c3 build
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.variant }}
+          path: |
+            build*/sfp_module_firmware.bin
+            build*/bootloader/bootloader.bin
+            build*/partition_table/partition-table.bin
