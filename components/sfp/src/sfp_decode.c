@@ -44,26 +44,37 @@ sfp_err_t sfp_decode_identity(const uint8_t a0[96], sfp_identity_t *id) {
 // log2(x) in 1/1024 units for x >= 1: position of the top bit plus a 16-entry
 // table for the fraction, linear in between. Worst error about 0.01 dB over
 // 0.1 uW to 6.5 mW.
-static int32_t log2_q10(uint32_t x) {
-    // frac[i] = round(1024 * log2(1 + i/16))
-    static const uint16_t frac[17] = {0,   90,  174, 254, 330, 402, 470, 536, 599,
-                                      659, 717, 773, 827, 879, 929, 977, 1024};
+static int32_t log2_q16(uint32_t x) {
+    // frac[i] = round(65536 * log2(1 + i/64)). 64 segments: a straight line
+    // between table points sits under the log curve by at most 0.0001 dB,
+    // where 16 segments left every reading biased low.
+    static const uint32_t frac[65] = {
+        0, 1466, 2909, 4331, 5732, 7112, 8473, 9814, 11136,
+        12440, 13727, 14996, 16248, 17484, 18704, 19909, 21098, 22272,
+        23433, 24579, 25711, 26830, 27936, 29029, 30109, 31178, 32234,
+        33279, 34312, 35334, 36346, 37346, 38336, 39316, 40286, 41246,
+        42196, 43137, 44068, 44990, 45904, 46809, 47705, 48593, 49472,
+        50344, 51207, 52063, 52911, 53751, 54584, 55410, 56229, 57040,
+        57845, 58643, 59434, 60219, 60997, 61769, 62534, 63294, 64047,
+        64794, 65536,
+    };
     int msb = 31;
     while (msb > 0 && !(x & (1u << msb))) --msb;
-    // 8 bits below the top bit: index (4 bits) + interpolation (4 bits)
-    uint32_t m = msb >= 8 ? (x >> (msb - 8)) & 0xFF : (x << (8 - msb)) & 0xFF;
-    uint32_t idx = m >> 4, t = m & 0xF;
-    int32_t f = (int32_t)(frac[idx] + (((uint32_t)(frac[idx + 1] - frac[idx]) * t) >> 4));
-    return msb * 1024 + f;
+    // 16 bits below the top bit: table index (6 bits) + interpolation (10 bits).
+    // Keeping only 8 and rounding down made every reading about 0.01 dB low.
+    uint32_t m = msb >= 16 ? (x >> (msb - 16)) & 0xFFFF : (x << (16 - msb)) & 0xFFFF;
+    uint32_t idx = m >> 10, t = m & 0x3FF;
+    uint32_t f = frac[idx] + (((frac[idx + 1] - frac[idx]) * t + 512) >> 10);
+    return msb * 65536 + (int32_t)f;
 }
 
 int16_t sfp_power_to_cdbm(uint16_t power_01uw) {
     if (power_01uw == 0) return SFP_NO_LIGHT;
     // dBm = 10 log10(P / 1 mW) with P in 0.1 uW: 10 log10(x) - 40.
-    // 10 log10(x) = 3.0103 * log2(x); in hundredths of a dB with log2 in Q10:
-    //   cdbm = log2_q10(x) * 301.03 / 1024 - 4000
-    int32_t l = log2_q10(power_01uw);
-    int32_t cdbm = (l * 30103 + 51200) / 102400 - 4000;
+    // 10 log10(x) = 3.0103 * log2(x); in hundredths of a dB with log2 in Q16:
+    //   cdbm = log2_q16(x) * 301.03 / 65536 - 4000   (rounded to nearest)
+    int64_t l = log2_q16(power_01uw);
+    int32_t cdbm = (int32_t)((l * 30103 + 3276800) / 6553600) - 4000;
     return (int16_t)cdbm;
 }
 

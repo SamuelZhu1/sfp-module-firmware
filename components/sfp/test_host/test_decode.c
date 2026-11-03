@@ -61,22 +61,27 @@ static void test_non_sfp_identifier_rejected(void) {
 }
 
 static void test_dbm_matches_float_across_range(void) {
-    // 0.1 uW to 6.5535 mW, every value: worst error must stay under 0.02 dB
-    int worst = 0;
+    // 0.1 uW to 6.5535 mW, every value, against float log10 rounded to
+    // hundredths: never more than 0.01 dB apart, and no bias in one direction
+    int worst = 0, low = 0, high = 0;
     for (uint32_t p = 1; p <= 65535; ++p) {
         int16_t got = sfp_power_to_cdbm((uint16_t)p);
         int want = (int)lround(1000.0 * log10(p / 10000.0));
         int err = abs(got - want);
         if (err > worst) worst = err;
+        if (got < want) ++low;
+        if (got > want) ++high;
     }
-    printf("dBm conversion worst error: 0.%02d dB\n", worst);
-    TEST_ASSERT_LESS_OR_EQUAL_INT(2, worst);
+    printf("dBm conversion: worst 0.%02d dB, %d of 65535 values 0.01 low, %d high\n", worst,
+           low, high);
+    TEST_ASSERT_LESS_OR_EQUAL_INT(1, worst);
+    TEST_ASSERT_LESS_THAN_INT(65535 / 100, low + high);  // under 1% off by one count
 }
 
 static void test_dbm_reference_points(void) {
-    TEST_ASSERT_INT16_WITHIN(1, 0, sfp_power_to_cdbm(10000));     // 1 mW = 0 dBm
-    TEST_ASSERT_INT16_WITHIN(1, -1000, sfp_power_to_cdbm(1000));  // 0.1 mW
-    TEST_ASSERT_INT16_WITHIN(1, -4000, sfp_power_to_cdbm(1));     // 0.1 uW
+    TEST_ASSERT_EQUAL_INT16(0, sfp_power_to_cdbm(10000));     // 1 mW = 0 dBm
+    TEST_ASSERT_EQUAL_INT16(-1000, sfp_power_to_cdbm(1000));  // 0.1 mW
+    TEST_ASSERT_EQUAL_INT16(-4000, sfp_power_to_cdbm(1));     // 0.1 uW
     TEST_ASSERT_EQUAL_INT16(SFP_NO_LIGHT, sfp_power_to_cdbm(0));
 }
 
@@ -99,8 +104,8 @@ static void test_live_values_internal_cal(void) {
     TEST_ASSERT_EQUAL_INT16((int16_t)(35.5 * 256), d.temp_c256);
     TEST_ASSERT_EQUAL_UINT16(33000, d.vcc_100uv);
     TEST_ASSERT_EQUAL_UINT16(3400, d.bias_2ua);
-    TEST_ASSERT_INT16_WITHIN(1, -240, d.tx_cdbm);  // 0.5754 mW
-    TEST_ASSERT_INT16_WITHIN(1, -510, d.rx_cdbm);  // 0.3090 mW
+    TEST_ASSERT_EQUAL_INT16(-240, d.tx_cdbm);  // 0.5754 mW
+    TEST_ASSERT_EQUAL_INT16(-510, d.rx_cdbm);  // 0.3090 mW
     TEST_ASSERT_EQUAL_UINT32(0, alarms);
 }
 

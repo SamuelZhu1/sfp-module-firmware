@@ -47,7 +47,7 @@ static void test_ddm_json(void) {
     TEST_ASSERT_NOT_NULL(strstr(out, "\"temp_c\":35.50"));
     TEST_ASSERT_NOT_NULL(strstr(out, "\"vcc_v\":3.3000"));
     TEST_ASSERT_NOT_NULL(strstr(out, "\"bias_ma\":6.800"));
-    TEST_ASSERT_NOT_NULL(strstr(out, "\"tx_dbm\":-2.4"));
+    TEST_ASSERT_NOT_NULL(strstr(out, "\"tx_dbm\":-2.40,\"rx_dbm\":-5.10"));
     TEST_ASSERT_NOT_NULL(strstr(out, "\"los\":false"));
 }
 
