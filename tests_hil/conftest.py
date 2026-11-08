@@ -14,6 +14,9 @@ def pytest_addoption(parser):
     parser.addoption("--sim", default=str(DEFAULT_SIM), help="path to the simulator binary")
     parser.addoption("--interactive", action="store_true", help="prompt for bench actions")
     parser.addoption("--cycles", type=int, default=200, help="hot-plug cycles in the soak test")
+    parser.addoption("--power-cycles", type=int, default=200, help="load switch cycles in the soak test")
+    parser.addoption("--faults", type=int, default=200, help="faults of each kind in the campaign")
+    parser.addoption("--ethtool", help="`ethtool -m <if>` output captured from the same module")
 
 
 @pytest.fixture
