@@ -1,0 +1,10 @@
+	Identifier                                : 0x03 (SFP)
+	Vendor name                               : FINISAR CORP.
+	Vendor PN                                 : FTLX1471D3BCL
+	Vendor SN                                 : UZ80TQ2
+	Laser wavelength                          : 1310nm
+	Laser bias current                        : 6.800 mA
+	Laser output power                        : 0.5754 mW / -2.40 dBm
+	Receiver signal average optical power     : 0.3090 mW / -5.10 dBm
+	Module temperature                        : 35.50 degrees C / 95.90 degrees F
+	Module voltage                            : 3.3000 V
