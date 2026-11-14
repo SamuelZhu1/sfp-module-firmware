@@ -24,6 +24,8 @@ corrupt read, a laser that trips).
 | R10 | TX_FAULT: up to 3 reset pulses, then latch with laser off | test_state; HIL |
 | R11 | RX_LOS clears only after 50 ms stable | test_state; HIL |
 | R12 | Pulling the module powers the cage off and clears data immediately | test_state; HIL |
+| R13 | Optical power in dBm within 0.01 dB of floating point, no bias | test_decode (all 65,535 inputs); HIL ethtool cross-check |
+| R14 | Survive repeated power cycles and injected bus faults without a power cycle of its own | HIL power-cycle soak, fault campaign |
 
 ## Threads and ownership
 
@@ -63,8 +65,10 @@ what makes timing tests exact.
 - Temperature: signed 1/256 degC. Supply: 100 uV. Bias: 2 uA. Optical power:
   0.1 uW. All stored as integers.
 - dBm = 10 log10(P / 1 mW). Computed as `10 * log10(2) * log2(P)` with a
-  64-entry log2 table and linear interpolation in Q10 fixed point. Worst error
-  against `log10` across 0.1 uW to 6.5 mW: 0.02 dB. Zero power is reported as
+  65-entry (64-segment) log2 table and linear interpolation in Q16 fixed
+  point. Against `log10` rounded to hundredths, over all 65,535 inputs: never
+  more than 0.01 dB apart, and only 274 values off by that 0.01 (266 low, 8
+  high). Zero power is reported as
   "no light" (JSON null), not as a huge negative number.
 - External calibration (byte 92 bit 4): slope/offset for bias, TX power,
   temperature and supply; a 4th-order float polynomial for RX power, as

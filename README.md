@@ -33,8 +33,10 @@ module plugged in
   marked INVALID.
 - **Diagnostics (page A2h).** One 22-byte burst read every 100 ms covers all
   five live values plus the status and alarm bytes. Optical power is converted
-  from microwatts to dBm in fixed point (table-based log2, worst error 0.02 dB
-  across the range). Internally and externally calibrated modules are both
+  from microwatts to dBm in fixed point (64-segment log2 table), within
+  0.01 dB of floating point for every one of the 65,535 possible readings.
+  `scripts/ethtool_compare.py` checks the readings against Linux `ethtool -m`
+  for the same module. Internally and externally calibrated modules are both
   supported.
 - **Alarms.** The module's own alarm and warning thresholds are read at
   identification; changes in the alarm flags are logged as events.
@@ -73,7 +75,7 @@ Host tests and the simulator need only GCC and Python:
 make -C components/sfp/test_host test       # 49 unit tests
 make -C components/sfp/test_host coverage   # line coverage (pip install gcovr)
 make -C components/sfp/test_host sim
-python3 -m pytest tests_hil                 # 20 tests against the simulator
+python3 -m pytest tests_hil                 # 27 tests against the simulator
 ```
 
 Firmware (ESP-IDF v5.2.2):
@@ -88,6 +90,15 @@ flashes it and runs the same pytest suite on the board:
 
 ```
 scripts/run_bench.sh /dev/ttyACM0 --interactive
+scripts/run_bench.sh /dev/ttyACM0 -k power_cycle --power-cycles 1000   # unattended, 1-2 hours
+scripts/run_bench.sh /dev/ttyACM0 -k campaign                          # 200 NACK + 200 stuck SDA
+```
+
+To cross-check against Linux, capture `ethtool -m eth0` with the module in a
+NIC, then move it to the cage:
+
+```
+scripts/ethtool_compare.py lr_ethtool.txt --port /dev/ttyACM0 --hex lr_ethtool_a0.hex
 ```
 
 ## Shell
@@ -112,7 +123,7 @@ Commands: `state`, `id`, `ddm`, `thresholds`, `alarms`, `txdis on|off`,
 | Part | Status |
 | --- | --- |
 | SDK core, decoder, transport | done; 49 unit tests, 86% line coverage |
-| Simulator and pytest suite | done; 20 tests pass, 1,000-cycle hot-plug soak in simulation with 0 failures |
+| Simulator and pytest suite | done; 27 tests pass. In simulation: 1,000 power cycles and 1,000 hot-plug cycles with 0 failures, 400 of 400 injected bus faults recovered, readings match the ethtool reference exactly |
 | ESP32-C3 port | compiles under ESP-IDF 5.2.2 with -Werror; not yet run on hardware |
 | Bench bring-up with real modules | next; see `docs/bringup.md` |
 

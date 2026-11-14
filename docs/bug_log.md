@@ -56,6 +56,33 @@ transfer. The firmware was fine.
 **Fix.** Hold for 120 ms so at least one poll meets it, and also check that it
 was cleared by bus recovery alone (no power cycle).
 
+## 6. Every optical power reading 0.01 dB low
+
+**Symptom.** Writing the ethtool cross-check: the module's TX power register
+read 5754 (0.5754 mW), which is -2.400 dBm, and ethtool's formula prints
+-2.40. The firmware printed -2.41. RX power was 0.01 dB low as well, and
+exactly 1 mW printed as -0.01 dBm. An early unit test had failed on that 1 mW
+case and was loosened to "within 0.01" instead of being fixed.
+
+**Cause.** Two truncations in the fixed-point log2, both rounding down: only
+8 bits below the top bit were kept (5754 / 16 = 359.6 became 359), and the
+interpolation shifted right without rounding. On top of that, straight-line
+interpolation between 16 table points always sits under the log curve.
+
+**Fix.** Q16 instead of Q10, 16 bits kept below the top bit, interpolation
+rounded to nearest, and 64 table segments instead of 16 (260 bytes of flash).
+Checked in Python over all 65,535 inputs before changing the C: worst error
+0.024 dB to 0.007 dB before display rounding, mean bias -0.007 dB to
+-0.0007 dB. The unit tests are exact again (1 mW = 0.00 dBm) and the full-range
+test now fails if more than 1% of inputs are off by 0.01.
+
+## Note: bus recovery count is attempts, not faults
+
+In the stuck-SDA campaign, 200 faults gave 916 bus recoveries. While the spare
+GPIO is still holding SDA, each retry tries the 9-clock recovery again and
+counts it. The counter is meant to show how hard the transport worked, so it
+stays that way; recovered faults are counted by the test.
+
 ## Design note: an all-zero EEPROM passes both checksums
 
 The sum of 63 zero bytes is zero, which matches a zero checksum byte. A

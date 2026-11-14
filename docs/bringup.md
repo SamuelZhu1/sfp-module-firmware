@@ -46,10 +46,19 @@ Avoid GPIO 8 and 9 too (strapping pins on the C3).
 7. `inject nack 3` and `inject sda_low 120`: `stats` should show the retries
    and bus recoveries with the state staying READY. Capture the 9-clock
    recovery on the analyser for the record.
-8. Run the full suite: `scripts/run_bench.sh /dev/ttyACM0 --interactive`, and
-   a soak with `--cycles 100` if a relay fixture is wired to the module's
-   power and MOD_ABS lines.
-9. Dump each module (`raw a0 0 128`, `raw a2 0 128`) into
+8. Run the full suite: `scripts/run_bench.sh /dev/ttyACM0 --interactive`.
+9. Unattended runs (no one at the bench):
+   - `scripts/run_bench.sh /dev/ttyACM0 -k power_cycle --power-cycles 1000`
+     (about 1 to 2 hours through the load switch)
+   - `scripts/run_bench.sh /dev/ttyACM0 -k campaign` (200 NACK bursts and
+     200 stuck-SDA holds, about 3 minutes)
+10. ethtool cross-check: with the module in a Linux NIC run
+    `ethtool -m eth0 > lr_ethtool.txt` and
+    `ethtool -m eth0 raw on hex on > lr_ethtool_a0.hex`, move it to the cage,
+    then `scripts/ethtool_compare.py lr_ethtool.txt --port /dev/ttyACM0 --hex lr_ethtool_a0.hex`.
+    Save the capture over `tests_hil/fixtures/ethtool_lr_reference*` so CI
+    uses the real one.
+11. Dump each module (`raw a0 0 128`, `raw a2 0 128`) into
    `test_host/fixtures/` so the host tests run against real images too.
 
 ## Results
@@ -62,6 +71,9 @@ was measured.
 | Insert to READY | 338 ms | |
 | Diagnostics poll rate | 10 Hz | |
 | RX_LOS edge to ISR (debug pin) | n/a | |
-| NACK burst recovery | 200 of 200 | |
-| Stuck SDA recovery | 200 of 200 | |
+| Power-on to READY (load switch) | 318 ms | |
+| Power-cycle soak | 1,000 cycles, 0 failures | |
+| NACK burst campaign | 200 of 200 recovered | |
+| Stuck SDA campaign | 200 of 200 recovered | |
 | Hot-plug soak | 1,000 cycles, 0 failures | |
+| Optical power vs ethtool | 0.00 dB (reference computed from the same image) | |
