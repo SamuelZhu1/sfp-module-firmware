@@ -8,7 +8,7 @@ jobs:
   host-tests:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Unit tests (Unity, native GCC, -Werror)
         run: make -C components/sfp/test_host test
       - run: pip install gcovr
@@ -18,8 +18,8 @@ jobs:
   hil-sim:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install pytest
@@ -31,7 +31,7 @@ jobs:
   static-analysis:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: sudo apt-get update && sudo apt-get install -y cppcheck
       - name: cppcheck
         run: >
@@ -47,7 +47,7 @@ jobs:
       matrix:
         variant: [release, test]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: idf.py build (${{ matrix.variant }})
         shell: bash
         run: |
@@ -58,7 +58,7 @@ jobs:
           else
             idf.py set-target esp32c3 build
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: firmware-${{ matrix.variant }}
           path: |
